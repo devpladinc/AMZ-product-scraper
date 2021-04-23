@@ -19,7 +19,7 @@ class AmazonProductScraper():
 
 
     def parse_url(self, url):
-
+        ''' get soup from url '''
         headers = {'User-Agent': self.rotate_UA()}
         content = None
 
@@ -32,7 +32,6 @@ class AmazonProductScraper():
                 # soup = BeautifulSoup(content, "lxml")
                 soup = BeautifulSoup(content, "html.parser")
             else:
-                print("Else here")
                 content = response.content
                 soup = None
         except Exception as e:
@@ -42,9 +41,9 @@ class AmazonProductScraper():
 
 
     def get_data(self):
-
-        content, soup, ct = self.parse_url('https://www.amazon.com.au/gp/bestsellers/lighting/ref=zg_bs_nav_0')
-        product_list, prod_name_l, prod_price_l, prod_rating_l, prod_rcount_l = [], [], [], [], []
+        
+        content, soup, ct = self.parse_url('https://www.amazon.com.au/gp/bestsellers/health/ref=zg_bs_nav_0')
+        product_list, prod_name_l, prod_price_l, prod_rating_l, prod_rcount_l, prod_asin_l = [], [], [], [], [], []
 
         try:
             # dissect soup
@@ -53,7 +52,7 @@ class AmazonProductScraper():
                 item_rating = self.get_product_rating(item)
                 item_name = self.get_product_name(item)
                 item_review_cnt = self.get_review_cnt(item)
-                # item_asin = self.get_product_asin(item)
+                item_asin = self.get_product_asin(item)
                 item_price = self.get_product_price(item)
 
                 product = {
@@ -61,7 +60,7 @@ class AmazonProductScraper():
                     'Price' : item_price,
                     'Rating' : item_rating,
                     'Review Count' : item_review_cnt,
-                    # 'ASIN' : item_asin
+                    'ASIN' : item_asin
                 }
 
                 product_list.append(product)
@@ -73,23 +72,26 @@ class AmazonProductScraper():
                 p_price = p['Price']
                 p_rating = p['Rating']
                 p_rcount = p['Review Count']
+                p_asin = p['ASIN']
 
                 prod_name_l.append(p_name)
                 prod_price_l.append(p_price)
                 prod_rating_l.append(p_rating)
                 prod_rcount_l.append(p_rcount)
+                prod_asin_l.append(p_asin)
 
             #generating CSV
             product_dict = {'Item Name': prod_name_l,
                             'Price': prod_price_l,
                             'Rating': prod_rating_l,
-                            'Review Count': prod_rcount_l
+                            'Review Count': prod_rcount_l,
+                            'ASIN' : prod_asin_l
                             }
 
             df = pd.DataFrame(product_dict) 
         
             # saving the dataframe 
-            df.to_csv('sample_product_{}-{}.csv'.format(str(date.today()),str(random.randrange(0,9999))))
+            df.to_csv('sample_product_{}-{}.csv'.format(str(date.today()),str(random.randrange(0,99999))))
             print("Done saving csv")
 
         except Exception as e:
@@ -127,7 +129,10 @@ class AmazonProductScraper():
 
     def get_product_asin(self, soup_src):
         try:
-            item_asin = soup_src.find('a', href = re.compile(r'product'))
+            asin_tag = soup_src.find("a", {"class" : "a-size-small a-link-normal"})
+            # ASIN = after /project-reviews
+            item_asin = str(asin_tag['href'].split("/")[2])
+
         except Exception as e:
             item_asin = "N/A"
 
